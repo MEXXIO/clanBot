@@ -18,7 +18,7 @@ import destiny2data as d2
 import unauthorized
 
 
-class ClanBot(commands.Bot):
+class ClanBot(commands.AutoShardedBot):
     version = '2.14.6'
     cog_list = ['cogs.admin', 'cogs.public', 'cogs.group', 'cogs.serveradmin']
     langs = ['de', 'en', 'es', 'es-mx', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-br', 'ru', 'zh-cht']
@@ -168,30 +168,30 @@ class ClanBot(commands.Bot):
             await self.logout()
             await self.close()
 
-    async def on_ready(self):
-        await self.dm_owner('on_ready fired')
+    async def on_shard_ready(self, shard_id):
+        await self.dm_owner('on_ready fired, shard {}'.format(shard_id))
         game = discord.Game('v{}'.format(self.version))
         await self.change_presence(status=discord.Status.dnd, activity=game)
-        self.all_commands['update'].enabled = False
-        self.all_commands['top'].enabled = False
-        await self.data.token_update()
-        await self.update_history()
-        await self.update_langs()
-        await self.update_prefixes()
-        self.get_channels()
-        await self.data.get_chars()
-        if self.args.forceupdate:
-            await self.force_update(self.args.type)
-        if not self.sched.running:
-            await self.force_update(self.all_types, post=False)
-            for lang in self.langs:
-                self.sched.add_job(self.data.destiny.update_manifest, 'cron', day_of_week='tue', hour='17', minute='0',
-                                   second='10', misfire_grace_time=86300, args=[lang])
-            self.sched.start()
+        # self.all_commands['update'].enabled = False
+        # self.all_commands['top'].enabled = False
+        # await self.data.token_update()
+        # await self.update_history()
+        # await self.update_langs()
+        # await self.update_prefixes()
+        # self.get_channels()
+        # await self.data.get_chars()
+        # if self.args.forceupdate:
+        #     await self.force_update(self.args.type)
+        # if not self.sched.running:
+        #     await self.force_update(self.all_types, post=False)
+        #     for lang in self.langs:
+        #         self.sched.add_job(self.data.destiny.update_manifest, 'cron', day_of_week='tue', hour='17', minute='0',
+        #                            second='10', misfire_grace_time=86300, args=[lang])
+        #     self.sched.start()
         game = discord.Game('v{}'.format(self.version))
         await self.change_presence(status=discord.Status.online, activity=game)
-        self.all_commands['update'].enabled = True
-        self.all_commands['top'].enabled = True
+        # self.all_commands['update'].enabled = True
+        # self.all_commands['top'].enabled = True
         return
 
     async def on_guild_join(self, guild):
@@ -763,6 +763,26 @@ class ClanBot(commands.Bot):
             clan_ids.append(clan_id[0])
         await self.data.get_clan_leaderboard(clan_ids, 1572939289, 10)
 
+    async def init_async_parts(self):
+        self.all_commands['update'].enabled = False
+        self.all_commands['top'].enabled = False
+        await self.data.token_update()
+        await self.update_history()
+        await self.update_langs()
+        await self.update_prefixes()
+        self.get_channels()
+        await self.data.get_chars()
+        if self.args.forceupdate:
+            await self.force_update(self.args.type)
+        if not self.sched.running:
+            await self.force_update(self.all_types, post=False)
+            for lang in self.langs:
+                self.sched.add_job(self.data.destiny.update_manifest, 'cron', day_of_week='tue', hour='17', minute='0',
+                                   second='10', misfire_grace_time=86300, args=[lang])
+            self.sched.start()
+        self.all_commands['update'].enabled = True
+        self.all_commands['top'].enabled = True
+
     def start_up(self):
         self.get_args()
         token = self.api_data['token']
@@ -770,6 +790,7 @@ class ClanBot(commands.Bot):
         self.remove_command('help')
         for cog in self.cog_list:
             self.load_extension(cog)
+        self.loop.create_task(self.init_async_parts())
         self.run(token)
 
 
@@ -782,5 +803,5 @@ def get_prefix(client, message):
 
 
 if __name__ == '__main__':
-    b = ClanBot(command_prefix=get_prefix)
+    b = ClanBot(command_prefix=get_prefix, shard_count=10)
     b.start_up()
