@@ -803,5 +803,5 @@ def get_prefix(client, message):
 
 
 if __name__ == '__main__':
-    b = ClanBot(command_prefix=get_prefix, shard_count=10)
+    b = ClanBot(command_prefix=get_prefix)
     b.start_up()
